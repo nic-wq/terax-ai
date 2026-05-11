@@ -92,6 +92,7 @@ fn apply_wayland_webkit_workaround() {
 
     // We use a raw print here because the tauri-plugin-log is not yet initialized.
     println!("Non-GNOME/KDE Wayland session detected ({desktop}); disabling DMA-BUF renderer");
+    // SAFETY: called before tauri::Builder spawns any threads, so no data race.
     unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
 }
 
