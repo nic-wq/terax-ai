@@ -60,7 +60,7 @@ async fn open_settings_window(app: tauri::AppHandle, tab: Option<String>) -> Res
 }
 
 // WebKitGTK 2.46+ DMA-BUF renderer crashes with EGL_BAD_PARAMETER on
-// wlroots/smithay compositors (#105). GNOME/KDE work fine, so don't blanket-disable.
+// wlroots compositors (#105). GNOME/KDE work fine, so don't blanket-disable.
 #[cfg(target_os = "linux")]
 fn apply_wayland_webkit_workaround() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some() {
