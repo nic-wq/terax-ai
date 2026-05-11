@@ -60,27 +60,38 @@ async fn open_settings_window(app: tauri::AppHandle, tab: Option<String>) -> Res
 }
 
 // WebKitGTK 2.46+ DMA-BUF renderer crashes with EGL_BAD_PARAMETER on
-// wlroots compositors (#105). GNOME/KDE work fine, so don't blanket-disable.
+// wlroots/smithay compositors (#105). GNOME/KDE work fine, so don't blanket-disable.
 #[cfg(target_os = "linux")]
 fn apply_wayland_webkit_workaround() {
     if std::env::var_os("WEBKIT_DISABLE_DMABUF_RENDERER").is_some() {
         return;
     }
-    if std::env::var("XDG_SESSION_TYPE").as_deref() != Ok("wayland") {
+
+    // Check for Wayland session. WAYLAND_DISPLAY is the most reliable indicator,
+    // but we check XDG_SESSION_TYPE as a fallback.
+    let is_wayland = std::env::var_os("WAYLAND_DISPLAY").is_some()
+        || std::env::var("XDG_SESSION_TYPE").as_deref() == Ok("wayland");
+
+    if !is_wayland {
         return;
     }
+
     let desktop = std::env::var("XDG_CURRENT_DESKTOP")
         .unwrap_or_default()
         .to_lowercase();
-    let affected = [
-        "hyprland", "niri", "sway", "river", "wayfire", "labwc", "dwl",
-    ]
-    .iter()
-    .any(|c| desktop.contains(c));
-    if !affected {
+
+    // GNOME and KDE (Plasma) are the only ones known to be stable with DMA-BUF.
+    // For anything else on Wayland (Niri, Sway, Hyprland, etc.), we disable it.
+    let is_stable = ["gnome", "kde", "plasma"]
+        .iter()
+        .any(|s| desktop.contains(s));
+
+    if is_stable {
         return;
     }
-    log::info!("wlroots compositor detected ({desktop}); disabling DMA-BUF renderer");
+
+    // We use a raw print here because the tauri-plugin-log is not yet initialized.
+    println!("Non-GNOME/KDE Wayland session detected ({desktop}); disabling DMA-BUF renderer");
     unsafe { std::env::set_var("WEBKIT_DISABLE_DMABUF_RENDERER", "1") };
 }
 
